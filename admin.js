@@ -1,16 +1,72 @@
+// ====== Keys ======
 const DEMO_KEY = 'cardapio-overlay-v1';
 const DELETED_KEY = 'cardapio-deleted-v1';
+const HISTORY_KEY = 'cardapio-history-v1';
+const PIN_KEY = 'cardapio-admin-pin-hash';
+
+// ====== PIN (simple local lock) ======
+const lockEl = document.getElementById('lock');
+const appEl = document.getElementById('app');
+const pinInput = document.getElementById('pinInput');
+const pinConfirm = document.getElementById('pinConfirm');
+const lockFirst = document.getElementById('lockFirst');
+
+async function sha256(s){
+  const enc = new TextEncoder().encode(s);
+  const hash = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function checkPin(){
+  const saved = localStorage.getItem(PIN_KEY);
+  if (!saved){
+    // first time: ask to set new PIN
+    lockFirst.style.display = 'block';
+    lockEl.style.display = 'flex';
+    pinConfirm.onclick = async ()=>{
+      if (!pinInput.value) return;
+      const h = await sha256(pinInput.value);
+      localStorage.setItem(PIN_KEY, h);
+      pinInput.value = '';
+      lockEl.style.display = 'none';
+      appEl.style.display = 'block';
+    };
+  }else{
+    lockFirst.style.display = 'none';
+    lockEl.style.display = 'flex';
+    pinConfirm.onclick = async ()=>{
+      const h = await sha256(pinInput.value);
+      if (h === localStorage.getItem(PIN_KEY)){
+        pinInput.value = '';
+        lockEl.style.display = 'none';
+        appEl.style.display = 'block';
+      }else{
+        alert('PIN incorreto');
+      }
+    };
+  }
+}
+checkPin();
+
+document.getElementById('btnChangePin').addEventListener('click', async ()=>{
+  const current = prompt('PIN atual:');
+  if (current === null) return;
+  const h = await sha256(current);
+  if (h !== localStorage.getItem(PIN_KEY)) return alert('PIN atual incorreto');
+  const next = prompt('Novo PIN:');
+  if (!next) return;
+  const h2 = await sha256(next);
+  localStorage.setItem(PIN_KEY, h2);
+  alert('PIN atualizado.');
+});
+document.getElementById('btnLock').addEventListener('click', ()=>{
+  appEl.style.display = 'none';
+  lockEl.style.display = 'flex';
+});
 
 // ====== Overlay helpers ======
-function loadOverlay(){
-  const arr = JSON.parse(localStorage.getItem(DEMO_KEY) || '[]');
-  const del = JSON.parse(localStorage.getItem(DELETED_KEY) || '[]');
-  return { arr, del };
-}
-function saveOverlay(arr, del){
-  localStorage.setItem(DEMO_KEY, JSON.stringify(arr));
-  localStorage.setItem(DELETED_KEY, JSON.stringify(del));
-}
+function loadOverlay(){ const arr = JSON.parse(localStorage.getItem(DEMO_KEY) || '[]'); const del = JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'); return { arr, del }; }
+function saveOverlay(arr, del){ localStorage.setItem(DEMO_KEY, JSON.stringify(arr)); localStorage.setItem(DELETED_KEY, JSON.stringify(del)); }
 function addOrUpdateOverlay(p){
   const { arr, del } = loadOverlay();
   const i = arr.findIndex(x => x.id === p.id);
@@ -18,23 +74,21 @@ function addOrUpdateOverlay(p){
   const di = del.indexOf(p.id); if (di >= 0) del.splice(di,1);
   saveOverlay(arr, del);
 }
-function markDeleted(id){
-  const { arr, del } = loadOverlay();
-  const i = arr.findIndex(x => x.id === id); if (i >= 0) arr.splice(i,1);
-  if (!del.includes(id)) del.push(id);
-  saveOverlay(arr, del);
-}
-function resetOverlay(){
-  localStorage.removeItem(DEMO_KEY);
-  localStorage.removeItem(DELETED_KEY);
+function markDeleted(id){ const { arr, del } = loadOverlay(); const i = arr.findIndex(x => x.id === id); if (i >= 0) arr.splice(i,1); if (!del.includes(id)) del.push(id); saveOverlay(arr, del); }
+function resetOverlay(){ localStorage.removeItem(DEMO_KEY); localStorage.removeItem(DELETED_KEY); }
+
+// ====== History helpers ======
+function loadHist(){ return JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}'); }
+function saveHist(h){ localStorage.setItem(HISTORY_KEY, JSON.stringify(h)); }
+function logMove(id, action, delta, before, after, note=''){
+  const h = loadHist();
+  if (!h[id]) h[id] = [];
+  h[id].push({ ts: new Date().toISOString(), action, delta, before, after, note });
+  saveHist(h);
 }
 
 // ====== Data load/merge ======
-async function fetchBase(){
-  const res = await fetch('data/produtos.json', { cache: 'no-store' });
-  if (!res.ok) throw new Error('Falha ao carregar data/produtos.json');
-  return await res.json();
-}
+async function fetchBase(){ const res = await fetch('data/produtos.json', { cache: 'no-store' }); if (!res.ok) throw new Error('Falha ao carregar data/produtos.json'); return await res.json(); }
 async function getMerged(){
   const base = await fetchBase();
   const { arr, del } = loadOverlay();
@@ -44,22 +98,88 @@ async function getMerged(){
   return Array.from(map.values());
 }
 
-// ====== UI helpers ======
+// ====== UI refs ======
 const tbody = document.getElementById('tbody');
 const statusEl = document.getElementById('status');
 const q = document.getElementById('q');
 const cat = document.getElementById('cat');
 const sortSel = document.getElementById('sort');
+const histModal = document.getElementById('histModal');
+const histTitle = document.getElementById('histTitle');
+const histSub = document.getElementById('histSub');
+const histTable = document.getElementById('histTable').querySelector('tbody');
+const btnHistClose = document.getElementById('btnHistClose');
+const btnHistClear = document.getElementById('btnHistClear');
+const btnHistExport = document.getElementById('btnHistExport');
 
+// Editor
+const f_nome = document.getElementById('f_nome');
+const f_categoria = document.getElementById('f_categoria');
+const f_imagem = document.getElementById('f_imagem');
+const f_estoque = document.getElementById('f_estoque');
+const f_promo = document.getElementById('f_promo');
+const f_destaque = document.getElementById('f_destaque');
+
+const f_p_broto = document.getElementById('f_p_broto');
+const f_p_media = document.getElementById('f_p_media');
+const f_p_grande = document.getElementById('f_p_grande');
+const f_c_broto = document.getElementById('f_c_broto');
+const f_c_media = document.getElementById('f_c_media');
+const f_c_grande = document.getElementById('f_c_grande');
+
+const f_preco = document.getElementById('f_preco');
+const f_custo = document.getElementById('f_custo');
+
+const sizesWrap = document.getElementById('sizesWrap');
+const priceWrap = document.getElementById('priceWrap');
+
+// Drag & Drop image
+const drop = document.getElementById('drop');
+const preview = document.getElementById('preview');
+drop.addEventListener('click', ()=>{
+  const inp = document.createElement('input'); inp.type='file'; inp.accept='image/*';
+  inp.addEventListener('change', ()=> readImage(inp.files?.[0]));
+  inp.click();
+});
+drop.addEventListener('dragover', (e)=>{ e.preventDefault(); drop.classList.add('drag'); });
+drop.addEventListener('dragleave', ()=> drop.classList.remove('drag'));
+drop.addEventListener('drop', (e)=>{
+  e.preventDefault(); drop.classList.remove('drag');
+  const file = e.dataTransfer.files?.[0]; if (file) readImage(file);
+});
+function readImage(file){
+  const fr = new FileReader();
+  fr.onload = () => {
+    const dataurl = fr.result;
+    f_imagem.value = dataurl; // salva data URL direto (overlay/merge vai carregar no index)
+    preview.src = dataurl; preview.style.display = 'block';
+  };
+  fr.readAsDataURL(file);
+}
+
+// ====== Logic ======
 let ITEMS = [];
 let selId = null;
 
 function currency(v){ return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}) }
 function norm(s){ return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
 function basePrice(p){ return p.tamanhos?.length ? Math.min(...p.tamanhos.map(t=>t.preco)) : (p.preco ?? 0); }
+function baseCost(p){
+  if (p.tamanhos?.length){
+    // custo base: menor custo dos tamanhos definidos (ou 0)
+    const cs = (p.custos||[]).map(c=>c.custo).filter(x=>typeof x==='number');
+    return cs.length ? Math.min(...cs) : 0;
+  }
+  return Number(p.custo || 0);
+}
+function marginPct(p){
+  const price = basePrice(p), cost = baseCost(p);
+  if (!price) return 0;
+  return ((price - cost)/price)*100;
+}
 
 function applyFilters(items){
-  let arr = items;
+  let arr = items.slice();
   const nq = norm(q.value);
   if (cat.value !== 'all') arr = arr.filter(p => p.categoria === cat.value);
   if (nq) arr = arr.filter(p => norm(p.nome).includes(nq));
@@ -68,17 +188,26 @@ function applyFilters(items){
     case 'name-desc': arr.sort((a,b)=> norm(b.nome).localeCompare(norm(a.nome))); break;
     case 'stock-asc': arr.sort((a,b)=> (a.estoque??0)-(b.estoque??0)); break;
     case 'stock-desc': arr.sort((a,b)=> (b.estoque??0)-(a.estoque??0)); break;
+    case 'margin-desc': arr.sort((a,b)=> marginPct(b) - marginPct(a)); break;
+    case 'margin-asc': arr.sort((a,b)=> marginPct(a) - marginPct(b)); break;
   }
   return arr;
 }
 
 function rowHTML(p){
   const precoBase = basePrice(p);
+  const custoBase = baseCost(p);
+  const mAbs = Math.max(0, precoBase - custoBase);
+  const mPct = marginPct(p);
   const out = Number(p.estoque) === 0;
+  const promo = p.promo ? `<span class="badge" style="margin-left:6px">Promo</span>` : '';
+  const badge = p.destaque ? `<span class="badge" style="margin-left:6px">${p.destaque}</span>` : '';
   return `<tr class="row" data-id="${p.id}">
-    <td><strong>${p.nome}</strong><br><span class="small">${p.tamanhos?.length?'Pizza (com tamanhos)':'Preço fixo'}</span></td>
+    <td><strong>${p.nome}</strong>${promo}${badge}<br><span class="small">${p.tamanhos?.length?'Pizza (tamanhos)':'Preço fixo'}</span></td>
     <td>${p.categoria} ${out?'<span class="badge out" style="margin-left:6px">Sem estoque</span>':''}</td>
     <td class="num">${currency(precoBase)}</td>
+    <td class="num">${currency(custoBase)}</td>
+    <td class="num">${currency(mAbs)} <span class="small">(${mPct.toFixed(1)}%)</span></td>
     <td class="num">
       <div style="display:flex;gap:6px;align-items:center;justify-content:flex-end">
         <button class="btnMinus" title="-1">–</button>
@@ -87,8 +216,10 @@ function rowHTML(p){
       </div>
     </td>
     <td>
-      <div style="display:flex;gap:6px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btnSetZero">Zerar</button>
+        <button class="btnAdj">Movimentar (±)</button>
+        <button class="btnHist">Histórico</button>
         <button class="btnEdit">Editar</button>
         <button class="btnDel">Excluir</button>
       </div>
@@ -98,10 +229,11 @@ function rowHTML(p){
 
 function render(items){
   tbody.innerHTML = items.map(rowHTML).join('');
-  statusEl.textContent = `${items.length} itens • overlay: ${(JSON.parse(localStorage.getItem(DEMO_KEY)||'[]')).length} edit(s)`;
+  const edits = JSON.parse(localStorage.getItem(DEMO_KEY)||'[]').length;
+  statusEl.textContent = `${items.length} itens • overlay: ${edits} edit(s)`;
 }
 
-// ====== Inline actions ======
+// ====== Actions ======
 tbody.addEventListener('click', (e)=>{
   const tr = e.target.closest('tr.row');
   if (!tr) return;
@@ -111,33 +243,58 @@ tbody.addEventListener('click', (e)=>{
 
   if (e.target.matches('.btnMinus')){
     const input = tr.querySelector('input.est');
-    input.value = Math.max(0, Number(input.value||0) - 1);
+    const before = Number(input.value||0);
+    input.value = Math.max(0, before - 1);
     p.estoque = Number(input.value);
     addOrUpdateOverlay(p);
+    logMove(p.id, '-1', -1, before, p.estoque, '');
     render(applyFilters(ITEMS));
   }
   if (e.target.matches('.btnPlus')){
     const input = tr.querySelector('input.est');
-    input.value = Number(input.value||0) + 1;
+    const before = Number(input.value||0);
+    input.value = before + 1;
     p.estoque = Number(input.value);
     addOrUpdateOverlay(p);
+    logMove(p.id, '+1', +1, before, p.estoque, '');
     render(applyFilters(ITEMS));
   }
   if (e.target.matches('.btnSetZero')){
     const input = tr.querySelector('input.est');
+    const before = Number(input.value||0);
     input.value = 0;
     p.estoque = 0;
     addOrUpdateOverlay(p);
+    logMove(p.id, 'zerar', -before, before, 0, 'Zerar estoque');
+    render(applyFilters(ITEMS));
+  }
+  if (e.target.matches('.btnAdj')){
+    const val = prompt('Quantidade (positivo ou negativo):', '1');
+    if (val === null) return;
+    const delta = Number(val);
+    if (Number.isNaN(delta)) return alert('Valor inválido');
+    const note = prompt('Nota (opcional):', '') || '';
+    const input = tr.querySelector('input.est');
+    const before = Number(input.value||0);
+    const after = Math.max(0, before + delta);
+    input.value = after;
+    p.estoque = after;
+    addOrUpdateOverlay(p);
+    logMove(p.id, 'ajuste', after-before, before, after, note);
     render(applyFilters(ITEMS));
   }
   if (e.target.matches('.btnDel')){
     if (confirm('Excluir este item do overlay?')){
       markDeleted(id);
+      logMove(p.id, 'excluir', 0, p.estoque, p.estoque, 'Removido (overlay)');
       boot();
     }
   }
   if (e.target.matches('.btnEdit')){
     openEditor(p);
+  }
+  if (e.target.matches('.btnHist')){
+    openHistory(p);
   }
 });
 
@@ -148,8 +305,11 @@ tbody.addEventListener('change', (e)=>{
   const p = ITEMS.find(x => x.id === id);
   if (!p) return;
   if (e.target.matches('input.est')){
-    p.estoque = Number(e.target.value||0);
+    const before = Number(p.estoque||0);
+    const after = Number(e.target.value||0);
+    p.estoque = after;
     addOrUpdateOverlay(p);
+    if (after !== before) logMove(p.id, 'editar', after-before, before, after, 'Edição direta');
     render(applyFilters(ITEMS));
   }
 });
@@ -158,36 +318,36 @@ q.addEventListener('input', ()=> render(applyFilters(ITEMS)));
 cat.addEventListener('change', ()=> render(applyFilters(ITEMS)));
 sortSel.addEventListener('change', ()=> render(applyFilters(ITEMS)));
 
-// ====== Editor lateral ======
-const f_nome = document.getElementById('f_nome');
-const f_categoria = document.getElementById('f_categoria');
-const f_imagem = document.getElementById('f_imagem');
-const f_estoque = document.getElementById('f_estoque');
-const f_p_broto = document.getElementById('f_p_broto');
-const f_p_media = document.getElementById('f_p_media');
-const f_p_grande = document.getElementById('f_p_grande');
-const f_preco = document.getElementById('f_preco');
-const sizesWrap = document.getElementById('sizesWrap');
-const priceWrap = document.getElementById('priceWrap');
-
+// ====== Editor ======
 function fillEditor(p){
   selId = p?.id || null;
   f_nome.value = p?.nome || '';
   f_categoria.value = p?.categoria || 'salgada';
   f_imagem.value = p?.imagem || 'img/placeholder.jpg';
+  if (p?.imagem && p.imagem.startsWith('data:')){
+    preview.src = p.imagem; preview.style.display='block';
+  }else{
+    preview.style.display='none';
+  }
   f_estoque.value = Number(p?.estoque ?? 0);
+  f_promo.checked = !!p?.promo;
+  f_destaque.value = p?.destaque || '';
+
   if (p?.categoria === 'bebida'){
     sizesWrap.style.display='none'; priceWrap.style.display='block';
     f_preco.value = p?.preco ?? 0;
+    f_custo.value = p?.custo ?? 0;
   } else {
     sizesWrap.style.display='block'; priceWrap.style.display='none';
     f_p_broto.value = p?.tamanhos?.[0]?.preco ?? '';
     f_p_media.value = p?.tamanhos?.[1]?.preco ?? '';
     f_p_grande.value = p?.tamanhos?.[2]?.preco ?? '';
+    f_c_broto.value = p?.custos?.[0]?.custo ?? '';
+    f_c_media.value = p?.custos?.[1]?.custo ?? '';
+    f_c_grande.value = p?.custos?.[2]?.custo ?? '';
   }
 }
 function openEditor(p){ fillEditor(p); }
-
 document.getElementById('btnClear').addEventListener('click', ()=> fillEditor(null));
 document.getElementById('f_categoria').addEventListener('change', ()=>{
   const v = f_categoria.value;
@@ -201,18 +361,40 @@ document.getElementById('btnSave').addEventListener('click', ()=>{
   const categoria = f_categoria.value;
   const estoque = Number(f_estoque.value||0);
   const imagem = f_imagem.value.trim() || 'img/placeholder.jpg';
-  let p = { id: selId || crypto.randomUUID().slice(0,8), nome, categoria, estoque, imagem };
+  const promo = !!f_promo.checked;
+  const destaque = f_destaque.value.trim();
+
+  let p = { id: selId || crypto.randomUUID().slice(0,8), nome, categoria, estoque, imagem, promo, destaque };
 
   if (categoria === 'bebida'){
     const preco = Number(f_preco.value||0);
-    p.preco = preco;
+    const custo = Number(f_custo.value||0);
+    p.preco = preco; p.custo = custo; p.tamanhos = []; p.custos = [];
   } else {
-    const t = [];
-    const broto = Number(f_p_broto.value); if (!Number.isNaN(broto) && f_p_broto.value !== '') t.push({ rotulo:'Broto (4)', preco:broto });
-    const media = Number(f_p_media.value); if (!Number.isNaN(media) && f_p_media.value !== '') t.push({ rotulo:'Média (6)', preco:media });
-    const grande = Number(f_p_grande.value); if (!Number.isNaN(grande) && f_p_grande.value !== '') t.push({ rotulo:'Grande (8)', preco:grande });
-    if (t.length) p.tamanhos = t;
-    else p.preco = Number(f_preco.value||0); // fallback se usuário quiser preco fixo mesmo em "salgada"
+    const tamanhos = [], custos = [];
+    const broto = f_p_broto.value!=='' ? Number(f_p_broto.value) : null;
+    const media = f_p_media.value!=='' ? Number(f_p_media.value) : null;
+    const grande = f_p_grande.value!=='' ? Number(f_p_grande.value) : null;
+    const cbroto = f_c_broto.value!=='' ? Number(f_c_broto.value) : null;
+    const cmedia = f_c_media.value!=='' ? Number(f_c_media.value) : null;
+    const cgrande = f_c_grande.value!=='' ? Number(f_c_grande.value) : null;
+
+    if (broto!==null){ tamanhos.push({ rotulo:'Broto (4)', preco:broto }); custos.push({ rotulo:'Broto (4)', custo: cbroto??0 }); }
+    if (media!==null){ tamanhos.push({ rotulo:'Média (6)', preco:media }); custos.push({ rotulo:'Média (6)', custo: cmedia??0 }); }
+    if (grande!==null){ tamanhos.push({ rotulo:'Grande (8)', preco:grande }); custos.push({ rotulo:'Grande (8)', custo: cgrande??0 }); }
+    p.tamanhos = tamanhos; p.custos = custos;
+    if (!tamanhos.length){
+      p.preco = Number(prompt('Preço fixo para este item (sem tamanhos):', '0')||0);
+      p.custo = Number(prompt('Custo fixo para este item:', '0')||0);
+    }
+  }
+
+  // se alterar estoque, log
+  const existing = ITEMS.find(x => x.id === p.id);
+  if (existing && existing.estoque !== p.estoque){
+    logMove(p.id, 'salvar', p.estoque - (existing.estoque||0), existing.estoque||0, p.estoque, 'Salvar no editor');
+  } else if (!existing){
+    logMove(p.id, 'criar', 0, 0, p.estoque, 'Novo item');
   }
 
   addOrUpdateOverlay(p);
@@ -222,13 +404,50 @@ document.getElementById('btnSave').addEventListener('click', ()=>{
 
 document.getElementById('btnAdd').addEventListener('click', ()=> openEditor(null));
 
+// ====== History modal ======
+let histProduct = null;
+function openHistory(p){
+  histProduct = p;
+  histTitle.textContent = `Histórico — ${p.nome}`;
+  const hist = loadHist()[p.id] || [];
+  histSub.textContent = `${hist.length} movimentação(ões)`;
+  histTable.innerHTML = hist.map(h=>{
+    const d = new Date(h.ts);
+    const ts = d.toLocaleString();
+    const delta = (h.delta>0?'+':'') + h.delta;
+    return `<tr><td>${ts}</td><td>${h.action}</td><td>${delta}</td><td>${h.before}→${h.after}</td><td>${(h.note||'')}</td></tr>`;
+  }).join('');
+  histModal.style.display = 'flex';
+}
+btnHistClose.addEventListener('click', ()=> histModal.style.display='none');
+btnHistClear.addEventListener('click', ()=>{
+  if (!histProduct) return;
+  if (!confirm('Limpar histórico deste item?')) return;
+  const h = loadHist();
+  h[histProduct.id] = [];
+  saveHist(h);
+  openHistory(histProduct);
+});
+btnHistExport.addEventListener('click', ()=>{
+  const h = loadHist();
+  const rows = [['id','nome','timestamp','acao','delta','antes','depois','nota']];
+  ITEMS.forEach(p => {
+    const arr = h[p.id] || [];
+    arr.forEach(m => rows.push([p.id, p.nome, m.ts, m.action, m.delta, m.before, m.after, (m.note||'')]));
+  });
+  const csv = rows.map(r => r.map(x => `"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type:'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download='historico-estoque.csv'; a.click();
+  URL.revokeObjectURL(url);
+});
+
 // ====== Import/Export ======
 document.getElementById('btnExport').addEventListener('click', async ()=>{
   const merged = await getMerged();
   const blob = new Blob([JSON.stringify(merged, null, 2)], { type:'application/json' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'produtos-merged.json'; a.click();
+  const a = document.createElement('a'); a.href = url; a.download = 'produtos-merged.json'; a.click();
   URL.revokeObjectURL(url);
 });
 
@@ -236,18 +455,13 @@ document.getElementById('btnImport').addEventListener('click', ()=>{
   const input = document.createElement('input'); input.type = 'file'; input.accept = 'application/json';
   input.addEventListener('change', async ()=>{
     const f = input.files[0]; if (!f) return;
-    const txt = await f.text();
-    try {
-      const list = JSON.parse(txt);
+    try{
+      const list = JSON.parse(await f.text());
       if (!Array.isArray(list)) throw new Error('JSON deve ser um array de produtos');
-      // salva tudo como overlay (substitui overlay atual)
       localStorage.setItem(DEMO_KEY, JSON.stringify(list));
-      // não mexe na lista de deletados
       boot();
       alert('Importado para overlay com sucesso!');
-    } catch (e) {
-      alert('Erro ao importar: ' + e.message);
-    }
+    }catch(e){ alert('Erro ao importar: ' + e.message); }
   });
   input.click();
 });
@@ -264,13 +478,13 @@ async function boot(){
   try{
     ITEMS = await getMerged();
     render(applyFilters(ITEMS));
-    // se havia um item selecionado, tenta preencher editor
+    // refill editor if selected
     if (selId){
       const p = ITEMS.find(x => x.id === selId);
       if (p) fillEditor(p);
     }
   } catch (e){
-    tbody.innerHTML = `<tr><td colspan="5">Erro: ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7">Erro: ${e.message}</td></tr>`;
   }
 }
 boot();
