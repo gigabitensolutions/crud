@@ -1,0 +1,37 @@
+[
+  {
+    "id": "pz-001",
+    "nome": "Pizza Calabresa",
+    "preco": 49.9,
+    "estoque": 8,
+    "categoria": "Pizzas"
+  },
+  {
+    "id": "pz-002",
+    "nome": "Pizza Mussarela",
+    "preco": 44.9,
+    "estoque": 0,
+    "categoria": "Pizzas"
+  },
+  {
+    "id": "pz-003",
+    "nome": "Pizza Portuguesa",
+    "preco": 54.9,
+    "estoque": 5,
+    "categoria": "Pizzas"
+  },
+  {
+    "id": "bz-101",
+    "nome": "Coca-Cola Lata 350ml",
+    "preco": 7.0,
+    "estoque": 24,
+    "categoria": "Bebidas"
+  },
+  {
+    "id": "bz-102",
+    "nome": "Água sem gás 500ml",
+    "preco": 5.0,
+    "estoque": 30,
+    "categoria": "Bebidas"
+  }
+]

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Cardápio (Demo) – GitHub Pages + JSON + LocalStorage</title>
+    <meta name="description" content="Demonstração de cardápio estático no GitHub Pages lendo JSON e com modo demo gravando no LocalStorage."/>
+    <link rel="stylesheet" href="./styles.css"/>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div>
+          <h1>Cardápio da Pizzaria <span class="small">— Demo (Pages + JSON + LocalStorage)</span></h1>
+          <div class="small">Base: <code>data/produtos.json</code> • Overlay: <code>localStorage</code></div>
+        </div>
+        <div class="controls">
+          <label for="ordenar" class="small">Ordenar:</label>
+          <select id="ordenar">
+            <option value="nome-asc">Nome (A→Z)</option>
+            <option value="nome-desc">Nome (Z→A)</option>
+            <option value="preco-asc">Preço (↓)</option>
+            <option value="preco-desc">Preço (↑)</option>
+            <option value="estoque-asc">Estoque (↓)</option>
+            <option value="estoque-desc">Estoque (↑)</option>
+          </select>
+          <button id="resetar" class="ghost">Resetar Demo</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <section class="card">
+          <h2 style="margin-top:0">Produtos</h2>
+          <ul id="lista" class="list"></ul>
+          <div class="footer">
+            <span id="status" class="small">–</span>
+            <span class="small">Dica: edite itens com o botão “Editar”.</span>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 style="margin-top:0">Adicionar / Editar (Modo Demo)</h2>
+          <form id="form-produto">
+            <input type="hidden" id="id"/>
+            <div style="display:grid;gap:8px;grid-template-columns:1fr 1fr">
+              <label>Nome<br/><input id="nome" required placeholder="Ex.: Pizza Marguerita"/></label>
+              <label>Categoria<br/><input id="categoria" placeholder="Ex.: Pizzas"/></label>
+              <label>Preço (R$)<br/><input id="preco" type="number" step="0.01" min="0" required placeholder="49.90"/></label>
+              <label>Estoque<br/><input id="estoque" type="number" step="1" min="0" required placeholder="5"/></label>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <button class="primary" type="submit">Salvar</button>
+              <button type="button" id="limpar" class="ghost">Limpar</button>
+              <span class="small">Os dados salvos vão apenas para o seu navegador.</span>
+            </div>
+          </form>
+          <hr/>
+          <div class="small">
+            Remoção: clique “Excluir”. Isto cria um overlay de exclusão (não deleta o arquivo base).
+          </div>
+        </section>
+      </div>
+    </div>
+    <script src="./script.js"></script>
+  </body>
+</html>
