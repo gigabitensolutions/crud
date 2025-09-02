@@ -1,37 +1,114 @@
 [
   {
-    "id": "pz-001",
-    "nome": "Pizza Calabresa",
-    "preco": 49.9,
+    "id": "marg",
+    "nome": "Pizza Margherita",
+    "categoria": "salgada",
+    "imagem": "img/pizza-margherita.jpg",
+    "destaque": "Clássica",
     "estoque": 8,
-    "categoria": "Pizzas"
+    "tamanhos": [
+      {
+        "rotulo": "Broto (4)",
+        "preco": 39.9
+      },
+      {
+        "rotulo": "Média (6)",
+        "preco": 49.9
+      },
+      {
+        "rotulo": "Grande (8)",
+        "preco": 59.9
+      }
+    ]
   },
   {
-    "id": "pz-002",
-    "nome": "Pizza Mussarela",
-    "preco": 44.9,
-    "estoque": 0,
-    "categoria": "Pizzas"
+    "id": "calab",
+    "nome": "Pizza Calabresa",
+    "categoria": "salgada",
+    "imagem": "img/pizza-calabresa.jpg",
+    "destaque": "Mais vendida",
+    "estoque": 6,
+    "tamanhos": [
+      {
+        "rotulo": "Broto (4)",
+        "preco": 42.9
+      },
+      {
+        "rotulo": "Média (6)",
+        "preco": 52.9
+      },
+      {
+        "rotulo": "Grande (8)",
+        "preco": 62.9
+      }
+    ]
   },
   {
-    "id": "pz-003",
+    "id": "port",
     "nome": "Pizza Portuguesa",
-    "preco": 54.9,
-    "estoque": 5,
-    "categoria": "Pizzas"
+    "categoria": "salgada",
+    "imagem": "img/pizza-portuguesa.jpg",
+    "estoque": 4,
+    "tamanhos": [
+      {
+        "rotulo": "Broto (4)",
+        "preco": 44.9
+      },
+      {
+        "rotulo": "Média (6)",
+        "preco": 56.9
+      },
+      {
+        "rotulo": "Grande (8)",
+        "preco": 66.9
+      }
+    ]
   },
   {
-    "id": "bz-101",
-    "nome": "Coca-Cola Lata 350ml",
-    "preco": 7.0,
-    "estoque": 24,
-    "categoria": "Bebidas"
+    "id": "brig",
+    "nome": "Pizza Brigadeiro",
+    "categoria": "doce",
+    "imagem": "img/pizza-brigadeiro.jpg",
+    "estoque": 7,
+    "tamanhos": [
+      {
+        "rotulo": "Média (6)",
+        "preco": 49.9
+      },
+      {
+        "rotulo": "Grande (8)",
+        "preco": 59.9
+      }
+    ]
   },
   {
-    "id": "bz-102",
-    "nome": "Água sem gás 500ml",
-    "preco": 5.0,
-    "estoque": 30,
-    "categoria": "Bebidas"
+    "id": "refri-2l",
+    "nome": "Refrigerante 2 L",
+    "categoria": "bebida",
+    "imagem": "img/refri-2l.jpg",
+    "embalagem": "Garrafa 2 L",
+    "preco": 12.0,
+    "estoque": 20
+  },
+  {
+    "id": "pepper",
+    "nome": "Pizza Pepperoni",
+    "categoria": "salgada",
+    "imagem": "img/pizza-pepperoni.jpg",
+    "estoque": 0,
+    "tamanhos": [
+      {
+        "rotulo": "Broto (4)",
+        "preco": 43.9
+      },
+      {
+        "rotulo": "Média (6)",
+        "preco": 55.9
+      },
+      {
+        "rotulo": "Grande (8)",
+        "preco": 65.9
+      }
+    ]
   }
 ]

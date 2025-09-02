@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+  <defs>
+    <linearGradient id="g" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#2a1815"/>
+      <stop offset="1" stop-color="#120c0b"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="900" fill="url(#g)"/>
+  <g fill="#efefef" opacity="0.8">
+    <circle cx="280" cy="340" r="60"/>
+    <circle cx="920" cy="520" r="40"/>
+    <rect x="350" y="400" width="500" height="40" rx="8"/>
+    <rect x="380" y="460" width="440" height="40" rx="8"/>
+  </g>
+  <g fill="#d9b8aa" opacity="0.75">
+    <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-family="Poppins, Arial" font-size="36">
+      Substitua por img/pizza-*.jpg
+    </text>
+  </g>
+</svg>

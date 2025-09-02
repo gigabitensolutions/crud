@@ -1,66 +1,430 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>Cardápio (Demo) – GitHub Pages + JSON + LocalStorage</title>
-    <meta name="description" content="Demonstração de cardápio estático no GitHub Pages lendo JSON e com modo demo gravando no LocalStorage."/>
-    <link rel="stylesheet" href="./styles.css"/>
-  </head>
-  <body>
-    <div class="container">
-      <div class="header">
-        <div>
-          <h1>Cardápio da Pizzaria <span class="small">— Demo (Pages + JSON + LocalStorage)</span></h1>
-          <div class="small">Base: <code>data/produtos.json</code> • Overlay: <code>localStorage</code></div>
-        </div>
-        <div class="controls">
-          <label for="ordenar" class="small">Ordenar:</label>
-          <select id="ordenar">
-            <option value="nome-asc">Nome (A→Z)</option>
-            <option value="nome-desc">Nome (Z→A)</option>
-            <option value="preco-asc">Preço (↓)</option>
-            <option value="preco-desc">Preço (↑)</option>
-            <option value="estoque-asc">Estoque (↓)</option>
-            <option value="estoque-desc">Estoque (↑)</option>
-          </select>
-          <button id="resetar" class="ghost">Resetar Demo</button>
-        </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cardápio da Pizzaria</title>
+  <meta name="description" content="Cardápio digital de pizzaria com pagamento por PIX via QR Code." />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#1a0f0f; --bg2:#231211; --card:#1d1412; --card2:#150f0e;
+      --border:#3b1f1c; --text:#f7f8fa; --muted:#d9b8aa; --accent:#ef4444; --accent2:#22c55e;
+    }
+    *{box-sizing:border-box} html,body{height:100%}
+    body{
+      margin:0; font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,'Noto Sans',sans-serif; color:var(--text);
+      background:
+        radial-gradient(900px 500px at 15% -10%, #6b2018 0%, transparent 55%),
+        radial-gradient(700px 420px at 88% -12%, #1a3d2a55 0%, transparent 60%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg2) 75%);
+    }
+    header{position:relative}
+    .hero-wrap{max-width:1100px;margin:auto;padding:36px 20px 8px}
+    .topbar{display:flex;align-items:center;justify-content:center;position:relative}
+    .brand{display:flex; align-items:center; gap:12px; text-decoration:none; color:inherit;}
+    .logo{width:54px;height:54px;border-radius:16px;background:conic-gradient(from 180deg,var(--accent),var(--accent2));
+      box-shadow:0 10px 30px #00000040; display:inline-block; overflow:hidden; border:1px solid var(--border);}
+    .logo img{ width:100%; height:100%; object-fit:contain; background:#0b0b0b; border-radius:inherit; display:block; }
+    h1{margin:0;font-size:28px;letter-spacing:.3px}
+    .wave{position:relative;margin-top:18px} .wave svg{display:block;width:100%;height:auto} .wave path{ fill: var(--bg2); }
+    main{max-width:1100px;margin:18px auto 0;padding:0 20px}
+    .controls{display:grid; grid-template-columns:1fr; gap:12px;background:#120c0b; border:1px solid var(--border); border-radius:14px; padding:12px; margin-bottom:16px;}
+    @media (min-width:720px){ .controls{ grid-template-columns:1fr auto auto; align-items:center; } }
+    .search{display:flex; align-items:center; gap:8px;background:#0e0a09; border:1px solid var(--border); border-radius:10px; padding:8px 10px;}
+    .search input{width:100%; background:transparent; border:0; outline:0; color:var(--text); font-size:14px;}
+    .chips{ display:flex; gap:8px; flex-wrap:wrap; }
+    .chip{ padding:8px 12px; border-radius:999px; border:1px solid var(--border); background:#0e0a09; color:var(--text); font-weight:700; cursor:pointer; font-size:12px;}
+    .chip.active{ outline:2px solid var(--accent); background:#190e0d; }
+    .sort{ display:flex; gap:8px; align-items:center; background:#0e0a09; border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--muted); font-size:13px;}
+    .sort select{ background:transparent; color:var(--text); border:0; outline:0; font-weight:700; cursor:pointer; }
+    .grid{display:grid;gap:16px;grid-template-columns:1fr}
+    @media(min-width:560px){.grid{grid-template-columns:repeat(2,1fr)}} @media(min-width:900px){.grid{grid-template-columns:repeat(3,1fr)}}
+    .card{position:relative;background:linear-gradient(180deg,var(--card),var(--card2)); border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 12px 26px #00000040}
+    .hero-img{ position:relative;background:#140e0d; aspect-ratio: 4 / 3; } .hero-img img{ width:100%; height:100%; object-fit:cover; opacity:.95; display:block; }
+    .badge{position:absolute;top:10px;left:10px;padding:6px 10px;border-radius:999px;background:#120c0b;border:1px solid var(--border);font-size:11px;color:var(--muted)}
+    .badge.promo{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#0b0b0b;border:0;font-weight:700}
+    .badge.out{ background:#3b0d0d;border-color:#7f1d1d;color:#fecaca;font-weight:800;text-transform:uppercase;letter-spacing:.3px; }
+    .content{padding:14px 14px 16px} .title{margin:4px 0 6px;font-size:16px}
+    .meta{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:12px;flex-wrap:wrap}
+    .price{margin:12px 0 10px;font-size:18px;font-weight:800;letter-spacing:.2px}
+    .btns{display:flex;gap:10px}
+    .btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 12px;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer;text-decoration:none;border:1px solid var(--border); background:#120c0b;color:var(--text)}
+    .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent2));border:none;color:#0b0b0b}
+    .btn:hover{transform:translateY(-1px)} .btn.disabled{opacity:.45;cursor:not-allowed;pointer-events:none;filter:saturate(.6)}
+    .sizes{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .size-btn{padding:8px 10px; font-size:12px; border-radius:10px; border:1px solid var(--border); background:#120c0b; color:var(--text); cursor:pointer; user-select:none;}
+    .size-btn.active{ outline:2px solid var(--accent); background:#190e0d; } .size-btn:disabled{ opacity:.45; cursor:not-allowed; }
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#0008;z-index:50}
+    .modal-card{width:min(560px,92vw);background:#120c0b;border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:0 10px 30px #00000066}
+    .modal h3{margin:0 0 12px} .field{width:100%;margin-top:6px;background:#0e0a09;border:1px solid var(--border);border-radius:10px;color:var(--text);padding:10px}
+    .qr-img{ width:min(360px, 100%); aspect-ratio: 1 / 1; height:auto; border-radius:12px;border:1px solid var(--border);background:#0e0a09;object-fit:contain;display:block }
+    .inline-ok{ opacity:0; transform: translateY(2px); transition: opacity .18s ease, transform .18s ease; font-size:12px; color: var(--muted); }
+    .inline-ok.show{ opacity:1; transform: translateY(0); }
+    .btns-pix{ display:flex; gap:10px; align-items:flex-start; } .btns-pix .btn{ flex:0 0 auto; }
+    .copy-wrap{ display:flex; flex-direction:column; gap:6px; align-items:flex-start; } .btn-copy{ padding:12px 18px; font-size:15px; font-weight:800; }
+    .btn-close{ padding:10px 12px; font-size:14px; }
+    footer{max-width:1100px;margin:40px auto 80px;padding:0 20px;color:var(--muted);font-size:12px}
+    .notice{border:1px dashed var(--border);padding:12px 14px;border-radius:14px;background:#120c0b}
+    @media (max-width:480px){ h1{ font-size:22px; } }
+
+    /* DEMO MODE UI */
+    .demo-bar{position:sticky; top:12px; z-index:20; display:none; gap:8px; align-items:center; background:#0e0a09; border:1px dashed var(--border); border-radius:12px; padding:10px 12px; font-size:12px; color:var(--muted);}
+    .demo-bar .btn{flex:0 0 auto}
+    .admin-btns{display:none; gap:8px; margin-top:8px}
+    .admin-btns .btn{flex:0 0 auto; font-size:12px; padding:8px 10px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="hero-wrap">
+      <div class="topbar">
+        <a class="brand" href="./" aria-label="Início">
+          <span class="logo"><img src="img/logo.svg" alt="Sua Pizzaria" onerror="this.style.display='none'"></span>
+          <h1>Cardápio da Pizzaria</h1>
+        </a>
       </div>
-
-      <div class="grid">
-        <section class="card">
-          <h2 style="margin-top:0">Produtos</h2>
-          <ul id="lista" class="list"></ul>
-          <div class="footer">
-            <span id="status" class="small">–</span>
-            <span class="small">Dica: edite itens com o botão “Editar”.</span>
-          </div>
-        </section>
-
-        <section class="card">
-          <h2 style="margin-top:0">Adicionar / Editar (Modo Demo)</h2>
-          <form id="form-produto">
-            <input type="hidden" id="id"/>
-            <div style="display:grid;gap:8px;grid-template-columns:1fr 1fr">
-              <label>Nome<br/><input id="nome" required placeholder="Ex.: Pizza Marguerita"/></label>
-              <label>Categoria<br/><input id="categoria" placeholder="Ex.: Pizzas"/></label>
-              <label>Preço (R$)<br/><input id="preco" type="number" step="0.01" min="0" required placeholder="49.90"/></label>
-              <label>Estoque<br/><input id="estoque" type="number" step="1" min="0" required placeholder="5"/></label>
-            </div>
-            <div style="display:flex;gap:8px;margin-top:12px">
-              <button class="primary" type="submit">Salvar</button>
-              <button type="button" id="limpar" class="ghost">Limpar</button>
-              <span class="small">Os dados salvos vão apenas para o seu navegador.</span>
-            </div>
-          </form>
-          <hr/>
-          <div class="small">
-            Remoção: clique “Excluir”. Isto cria um overlay de exclusão (não deleta o arquivo base).
-          </div>
-        </section>
+      <div id="demoBar" class="demo-bar">
+        <strong>Demo ativa</strong> — Base: <code>data/produtos.json</code> + Overlay: <code>localStorage</code>
+        <button id="btnAdd" class="btn">Adicionar item</button>
+        <button id="btnReset" class="btn">Resetar overlay</button>
       </div>
     </div>
-    <script src="./script.js"></script>
-  </body>
+    <div class="wave" aria-hidden="true">
+      <svg viewBox="0 0 1440 120" preserveAspectRatio="none"><path d="M0,80 C240,140 480,20 720,60 C960,100 1200,120 1440,60 L1440,120 L0,120 Z"></path></svg>
+    </div>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="Busca, filtros e ordenação">
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 21l-4.3-4.3M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z" stroke="#d9b8aa" stroke-width="2" stroke-linecap="round"/></svg>
+        <input id="searchInput" type="search" placeholder="Buscar por nome (ex.: Calabresa, Margherita)"/>
+      </div>
+      <div class="chips" role="tablist" aria-label="Categorias">
+        <button class="chip active" data-cat="all" role="tab" aria-selected="true">Todos</button>
+        <button class="chip" data-cat="salgada" role="tab" aria-selected="false">Salgadas</button>
+        <button class="chip" data-cat="doce" role="tab" aria-selected="false">Doces</button>
+        <button class="chip" data-cat="bebida" role="tab" aria-selected="false">Bebidas</button>
+      </div>
+      <div class="sort">
+        <span>Ordenar:</span>
+        <select id="sortSelect" aria-label="Ordenação">
+          <option value="relevance">Relevância</option>
+          <option value="price-asc">Preço ↑</option>
+          <option value="price-desc">Preço ↓</option>
+          <option value="name-asc">Nome A→Z</option>
+          <option value="name-desc">Nome Z→A</option>
+        </select>
+      </div>
+    </section>
+    <div id="grid" class="grid"></div>
+  </main>
+
+  <div id="pixQrModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="pixTitle">
+    <div class="modal-card">
+      <h3 id="pixTitle">Pagar com PIX</h3>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+        <img id="pixQrImg" class="qr-img" alt="QR Code PIX"/>
+        <div style="flex:1;min-width:220px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Copia e Cola</div>
+          <textarea id="pixCopiaCola" readonly class="field" style="min-height:120px"></textarea>
+          <div class="btns-pix" style="margin-top:10px">
+            <div class="copy-wrap">
+              <button id="btnCopy" class="btn btn-copy" type="button">Copiar</button>
+              <span id="copyMsg" class="inline-ok" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">Copiado!</span>
+            </div>
+            <button id="closeQr" class="btn btn-close" type="button" style="margin-left:auto">Fechar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer><div class="notice">⚠️ Entregas e retirada local. Valores sujeitos a alteração e disponibilidade de ingredientes.</div></footer>
+
+  <script>
+    // ================== CONFIG PIX ==================
+    const PIX_KEY = 'edab0cd5-ecd4-4050-87f7-fbaf98899713';
+    const RECEIVER_NAME = 'PIZZARIA CASA DE PRAIA';
+    const RECEIVER_CITY = 'BRASIL';
+
+    // ================== DEMO MODE (?demo=1) ==================
+    const demoMode = new URLSearchParams(location.search).get('demo') === '1';
+    if (demoMode) document.getElementById('demoBar').style.display = 'flex';
+
+    const DEMO_KEY = 'cardapio-overlay-v1';
+    const DELETED_KEY = 'cardapio-deleted-v1';
+
+    function loadOverlay(){
+      const arr = JSON.parse(localStorage.getItem(DEMO_KEY) || '[]');
+      const del = JSON.parse(localStorage.getItem(DELETED_KEY) || '[]');
+      return { arr, del };
+    }
+    function saveOverlay(arr, del){
+      localStorage.setItem(DEMO_KEY, JSON.stringify(arr));
+      localStorage.setItem(DELETED_KEY, JSON.stringify(del));
+    }
+    function addOrUpdateOverlay(p){
+      const { arr, del } = loadOverlay();
+      const i = arr.findIndex(x => x.id === p.id);
+      if (i >= 0) arr[i] = p; else arr.push(p);
+      const di = del.indexOf(p.id); if (di >= 0) del.splice(di,1);
+      saveOverlay(arr, del);
+    }
+    function markDeleted(id){
+      const { arr, del } = loadOverlay();
+      const i = arr.findIndex(x => x.id === id); if (i >= 0) arr.splice(i,1);
+      if (!del.includes(id)) del.push(id);
+      saveOverlay(arr, del);
+    }
+    function resetOverlay(){
+      localStorage.removeItem(DEMO_KEY);
+      localStorage.removeItem(DELETED_KEY);
+    }
+
+    // ================== LOAD DATA (JSON + overlay) ==================
+    let produtosBase = [];
+    async function fetchBase(){
+      const res = await fetch('data/produtos.json', { cache: 'no-store' });
+      if (!res.ok) throw new Error('Falha ao carregar data/produtos.json');
+      return await res.json();
+    }
+    async function getProdutos(){
+      const base = await fetchBase();
+      const { arr, del } = loadOverlay();
+      const map = new Map(base.map(p => [p.id, p]));
+      del.forEach(id => map.delete(id));
+      arr.forEach(p => map.set(p.id, p));
+      return Array.from(map.values());
+    }
+
+    // ================== RENDER ==================
+    const grid = document.getElementById('grid');
+    function currency(v){ return Number(v||0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' }) }
+    function norm(s){ return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+    function basePrice(p){ return p.tamanhos?.length ? Math.min(...p.tamanhos.map(t=>t.preco)) : (p.preco ?? 0); }
+
+    function sizesHTML(p){
+      if (!p.tamanhos || !p.tamanhos.length) return '';
+      return `<div class="sizes" role="group" aria-label="Tamanhos">
+        ${p.tamanhos.map((t,i)=>`<button class="size-btn ${i===0?'active':''}" type="button" data-label="${t.rotulo.replace(/"/g,'&quot;')}" data-price="${t.preco.toFixed(2)}" aria-pressed="${i===0?'true':'false'}">${t.rotulo} — ${currency(t.preco)}</button>`).join('')}
+      </div>`;
+    }
+
+    function adminBtnsHTML(p){
+      if (!demoMode) return '';
+      return `<div class="admin-btns">
+        <button class="btn btn-edit" type="button">Editar</button>
+        <button class="btn btn-del" type="button">Excluir</button>
+      </div>`;
+    }
+
+    function cardHTML(p){
+      const semEstoque = Number(p.estoque) === 0;
+      let badgeHtml = semEstoque ? `<span class="badge out">Sem estoque</span>` :
+                     (p.destaque ? `<span class="badge promo">${p.destaque}</span>` : `<span class="badge">${p.categoria}</span>`);
+      const precoInicial = p.tamanhos?.[0]?.preco ?? p.preco;
+      const detalheItem  = p.tamanhos?.[0]?.rotulo ?? (p.embalagem || 'Unidade');
+      const btnPix = semEstoque ? `<button class="btn primary disabled" aria-disabled="true" title="Sem estoque">PIX (indisponível)</button>`
+        : `<a class="btn primary" href="#" onclick="abrirPix('${encodeURIComponent(p.id)}', this); return false;">PIX (QR)</a>`;
+
+      return `<article class="card" data-id="${p.id}" data-nome="${p.nome.replace(/"/g,'&quot;')}" data-preco="${precoInicial}" data-detalhe="${detalheItem.replace(/"/g,'&quot;')}" data-cat="${p.categoria}">
+        <div class="hero-img">
+          <img src="${p.imagem || 'img/placeholder.jpg'}" alt="${p.nome} ${p.embalagem||''}" loading="lazy" onerror="this.onerror=null;this.src='img/placeholder.jpg'"/>
+          ${badgeHtml}
+        </div>
+        <div class="content">
+          <h2 class="title">${p.nome}</h2>
+          <div class="meta"><span>Categoria: ${p.categoria}</span>${typeof p.estoque==='number'?`<span>•</span><span>Estoque: ${p.estoque}</span>`:''}</div>
+          ${sizesHTML(p)}
+          <div class="price">${currency(precoInicial)}</div>
+          <div class="btns">${btnPix}</div>
+          ${adminBtnsHTML(p)}
+        </div>
+      </article>`;
+    }
+
+    function render(list){ grid.innerHTML = list.map(cardHTML).join('') }
+
+    // ================== BUSCA + FILTRO + ORDENAÇÃO ==================
+    const state = { q:'', cat:'all', sort:'relevance', items:[] };
+    const searchInput = document.getElementById('searchInput');
+    const chips = document.querySelectorAll('.chip');
+    const sortSelect = document.getElementById('sortSelect');
+
+    function applyFilters(items){
+      const nq = norm(state.q);
+      let arr = items.filter(p => (state.cat==='all' || p.categoria===state.cat) && (!nq || norm(p.nome).includes(nq)));
+      switch(state.sort){
+        case 'price-asc':  arr.sort((a,b)=> basePrice(a) - basePrice(b)); break;
+        case 'price-desc': arr.sort((a,b)=> basePrice(b) - basePrice(a)); break;
+        case 'name-asc':   arr.sort((a,b)=> norm(a.nome).localeCompare(norm(b.nome))); break;
+        case 'name-desc':  arr.sort((a,b)=> norm(b.nome).localeCompare(norm(a.nome))); break;
+        default: break;
+      }
+      return arr;
+    }
+
+    async function update(){
+      const items = state.items;
+      render(applyFilters(items));
+      if (demoMode){
+        document.querySelectorAll('.card .admin-btns').forEach(el => el.style.display = 'flex');
+      }
+    }
+
+    searchInput.addEventListener('input', ()=>{ state.q = searchInput.value; update(); });
+    chips.forEach(btn=> btn.addEventListener('click', ()=>{
+      chips.forEach(b=>{ b.classList.remove('active'); b.setAttribute('aria-selected','false'); });
+      btn.classList.add('active'); btn.setAttribute('aria-selected','true');
+      state.cat = btn.dataset.cat; update();
+    }));
+    sortSelect.addEventListener('change', ()=>{ state.sort = sortSelect.value; update(); });
+
+    // ================== INTERAÇÕES (tamanhos e PIX) ==================
+    const qrModal=document.getElementById('pixQrModal'), qrImg=document.getElementById('pixQrImg'), copiaCola=document.getElementById('pixCopiaCola'), pixTitle=document.getElementById('pixTitle'), btnCopy=document.getElementById('btnCopy'), closeQr=document.getElementById('closeQr'), copyMsg=document.getElementById('copyMsg');
+
+    grid.addEventListener('click', (e)=>{
+      const sizeBtn = e.target.closest('.size-btn');
+      if (sizeBtn){
+        const sizes = sizeBtn.parentElement;
+        sizes.querySelectorAll('.size-btn').forEach(b=>{ b.classList.remove('active'); b.setAttribute('aria-pressed','false'); });
+        sizeBtn.classList.add('active'); sizeBtn.setAttribute('aria-pressed','true');
+        const card = sizeBtn.closest('.card'), priceEl = card.querySelector('.price');
+        priceEl.textContent = currency(parseFloat(sizeBtn.dataset.price));
+        card.dataset.preco = sizeBtn.dataset.price; card.dataset.detalhe = sizeBtn.dataset.label; return;
+      }
+      const delBtn = e.target.closest('.btn-del');
+      if (delBtn && demoMode){
+        const id = delBtn.closest('.card').dataset.id;
+        if (confirm('Excluir este item da DEMO?')){ markDeleted(id); boot(); }
+        return;
+      }
+      const editBtn = e.target.closest('.btn-edit');
+      if (editBtn && demoMode){
+        const card = editBtn.closest('.card');
+        const id = card.dataset.id;
+        const p = state.items.find(x => x.id === id);
+        openEditor(p);
+        return;
+      }
+    });
+
+    function abrirPix(idEnc, triggerEl){
+      const id = decodeURIComponent(idEnc);
+      const card = triggerEl.closest('.card');
+      const nome = card.dataset.nome;
+      const detalhe = card.dataset.detalhe || 'Unidade';
+      const preco = parseFloat(card.dataset.preco || '0');
+      const txid = (id.slice(0,20) + Date.now().toString().slice(-5)).slice(0,25);
+      const descr = (nome + (detalhe ? ' ' + detalhe : '')).slice(0,50);
+      const payload = montarPix(PIX_KEY, RECEIVER_NAME, RECEIVER_CITY, preco, txid, descr);
+      mostrarQrPix(`${nome} — ${currency(preco)}`, payload);
+    }
+
+    function mostrarQrPix(titulo, payload){
+      pixTitle.textContent = titulo; copiaCola.value = payload;
+      qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=480x480&data=${encodeURIComponent(payload)}`;
+      if (copyMsg){ copyMsg.classList.remove('show'); copyMsg.setAttribute('aria-hidden','true'); copyMsg.textContent = 'Copiado!'; }
+      btnCopy.textContent = 'Copiar'; qrModal.style.display='flex';
+    }
+    closeQr.addEventListener('click', ()=> qrModal.style.display='none');
+    btnCopy.addEventListener('click', async () => {
+      const txt = copiaCola.value; const original = btnCopy.textContent;
+      try{
+        if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(txt);
+        else { copiaCola.select(); document.execCommand('copy'); window.getSelection().removeAllRanges(); }
+        btnCopy.textContent = 'Copiado ✓'; copyMsg.textContent = 'PIX copiado'; copyMsg.classList.add('show'); copyMsg.setAttribute('aria-hidden','false');
+        if ('vibrate' in navigator) navigator.vibrate(15);
+        setTimeout(()=>{ btnCopy.textContent = original; copyMsg.classList.remove('show'); copyMsg.setAttribute('aria-hidden','true'); }, 1500);
+      }catch(e){
+        copyMsg.textContent = 'Não foi possível copiar'; copyMsg.classList.add('show'); copyMsg.setAttribute('aria-hidden','false');
+        setTimeout(()=>{ copyMsg.classList.remove('show'); copyMsg.setAttribute('aria-hidden','true'); copyMsg.textContent = 'Copiado!'; }, 2000);
+      }
+    });
+
+    // Helpers PIX
+    function toAscii(s){ return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9 \-\.]/g,''); }
+    function byteLen(s){ return new TextEncoder().encode(s).length }
+    function cutBytes(s,max){ let t=toAscii(s); while(byteLen(t)>max){ t=t.slice(0,-1) } return t }
+    function montarPix(chave, nome, cidade, valor, txid, descricao){
+      const NOME = cutBytes(nome||'HOSPEDE',25); const CIDADE = cutBytes(cidade||'BRASIL',15);
+      const TXID = toAscii((txid||'CARDAPIO')).slice(0,25); const DESC = descricao ? toAscii(descricao).slice(0,50) : '';
+      const KEY = (chave||'').trim();
+      function tlv(id,value){ const len = byteLen(value).toString().padStart(2,'0'); return id + len + value }
+      const gui = tlv('26', tlv('00','br.gov.bcb.pix') + tlv('01', KEY) + (DESC ? tlv('02', DESC) : ''));
+      const payloadSemCRC =
+        tlv('00','01') + tlv('01','11') + gui + tlv('52','0000') + tlv('53','986') +
+        (valor ? tlv('54', Number(valor).toFixed(2)) : '') + tlv('58','BR') +
+        tlv('59', NOME) + tlv('60', CIDADE) + tlv('62', tlv('05', TXID)) + '6304';
+      const crc = crc16(payloadSemCRC).toUpperCase();
+      return payloadSemCRC + crc;
+    }
+    function crc16(str){
+      let crc=0xFFFF;
+      for(let i=0;i<str.length;i++){
+        crc ^= str.charCodeAt(i)<<8;
+        for(let j=0;j<8;j++){
+          if(crc & 0x8000){ crc=(crc<<1)^0x1021 } else { crc=(crc<<1) }
+          crc &= 0xFFFF
+        }
+      }
+      return crc.toString(16).padStart(4,'0')
+    }
+
+    // ================== DEMO EDITOR (apenas quando ?demo=1) ==================
+    const btnAdd = document.getElementById('btnAdd');
+    const btnReset = document.getElementById('btnReset');
+    if (demoMode){
+      btnAdd.addEventListener('click', ()=> openEditor());
+      btnReset.addEventListener('click', ()=> { if(confirm('Limpar overlay (LocalStorage)?')){ resetOverlay(); boot(); } });
+    }
+
+    function openEditor(p){
+      const nome = prompt('Nome do produto:', p?.nome || '');
+      if (nome === null) return;
+      const categoria = prompt('Categoria (salgada/doce/bebida):', p?.categoria || 'salgada');
+      if (categoria === null) return;
+      const estoque = Number(prompt('Estoque (número):', p?.estoque ?? 0));
+      if (Number.isNaN(estoque)) return alert('Estoque inválido');
+      const imagem = prompt('Caminho da imagem (ex.: img/pizza-nova.jpg):', p?.imagem || 'img/placeholder.jpg');
+      if (imagem === null) return;
+      let tamanhos = p?.tamanhos || [];
+      let preco = p?.preco ?? null;
+      if (categoria !== 'bebida'){
+        const broto = Number(prompt('Preço Broto (ou deixe em branco):', tamanhos?.[0]?.preco ?? ''));
+        const media = Number(prompt('Preço Média (ou deixe em branco):', tamanhos?.[1]?.preco ?? ''));
+        const grande = Number(prompt('Preço Grande (ou deixe em branco):', tamanhos?.[2]?.preco ?? ''));
+        tamanhos = [];
+        if (!Number.isNaN(broto)) tamanhos.push({ rotulo:'Broto (4)', preco: broto });
+        if (!Number.isNaN(media)) tamanhos.push({ rotulo:'Média (6)', preco: media });
+        if (!Number.isNaN(grande)) tamanhos.push({ rotulo:'Grande (8)', preco: grande });
+        preco = null;
+      } else {
+        const pfixo = Number(prompt('Preço (bebida):', preco ?? 0));
+        if (Number.isNaN(pfixo)) return alert('Preço inválido');
+        preco = pfixo; tamanhos = [];
+      }
+      const id = p?.id || crypto.randomUUID().slice(0,8);
+      const novo = { id, nome, categoria, imagem, estoque };
+      if (tamanhos.length) novo.tamanhos = tamanhos; else { novo.preco = preco; }
+      addOrUpdateOverlay(novo);
+      boot();
+    }
+
+    // ================== BOOT ==================
+    const searchEl = document.getElementById('searchInput');
+    async function boot(){
+      try{
+        state.items = await getProdutos();
+        update();
+      }catch(e){
+        grid.innerHTML = `<div class="notice">Erro ao carregar dados: ${e.message}</div>`;
+      }
+    }
+    boot();
+  </script>
+</body>
 </html>

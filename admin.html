@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Admin – Cardápio da Pizzaria (Demo)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css"/>
+</head>
+<body>
+  <div class="container">
+    <div class="top">
+      <h1>Admin de Estoque <span class="small">— Demo (overlay LocalStorage)</span></h1>
+      <div class="toolbar">
+        <button id="btnExport" class="primary">Exportar JSON (merge)</button>
+        <button id="btnImport">Importar JSON → overlay</button>
+        <button id="btnReset" class="warn">Resetar overlay</button>
+      </div>
+    </div>
+
+    <div class="card controls">
+      <input type="search" id="q" placeholder="Buscar por nome...">
+      <select id="cat">
+        <option value="all">Todas categorias</option>
+        <option value="salgada">Salgadas</option>
+        <option value="doce">Doces</option>
+        <option value="bebida">Bebidas</option>
+      </select>
+      <select id="sort">
+        <option value="name-asc">Nome A→Z</option>
+        <option value="name-desc">Nome Z→A</option>
+        <option value="stock-asc">Estoque ↑</option>
+        <option value="stock-desc">Estoque ↓</option>
+      </select>
+      <div class="right" style="flex:1">
+        <button id="btnAdd" class="primary">Adicionar item</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section class="card">
+        <table class="table" aria-label="Tabela de estoque">
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Categoria</th>
+              <th class="num">Preço base</th>
+              <th class="num">Estoque</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div class="small" id="status">–</div>
+      </section>
+
+      <aside class="card">
+        <h3 style="margin:0 0 8px">Editor rápido</h3>
+        <div id="editor">
+          <div class="small">Selecione “Editar” em um item para preencher o formulário.</div>
+          <hr/>
+          <label>Nome<br><input id="f_nome" placeholder="Ex.: Pizza Marguerita"/></label><br><br>
+          <label>Categoria<br>
+            <select id="f_categoria">
+              <option value="salgada">Salgada</option>
+              <option value="doce">Doce</option>
+              <option value="bebida">Bebida</option>
+            </select>
+          </label><br><br>
+          <label>Imagem<br><input id="f_imagem" placeholder="img/pizza-nova.jpg"/></label><br><br>
+          <label>Estoque<br><input id="f_estoque" type="number" step="1" class="inline"/></label><br><br>
+          <div id="sizesWrap">
+            <div class="small">Tamanhos (para pizzas):</div>
+            <label>Broto (4) R$ <input id="f_p_broto" type="number" step="0.01" class="inline"/></label><br>
+            <label>Média (6) R$ <input id="f_p_media" type="number" step="0.01" class="inline"/></label><br>
+            <label>Grande (8) R$ <input id="f_p_grande" type="number" step="0.01" class="inline"/></label><br>
+          </div>
+          <div id="priceWrap" style="display:none;">
+            <div class="small">Preço (para bebidas/outros):</div>
+            <label>Preço R$ <input id="f_preco" type="number" step="0.01" class="inline"/></label>
+          </div>
+          <hr/>
+          <div class="right">
+            <button id="btnSave" class="primary">Salvar</button>
+            <button id="btnClear">Limpar</button>
+          </div>
+        </div>
+        <hr/>
+        <div class="small">Obs.: Este admin altera apenas o <strong>overlay</strong> no seu navegador. Use “Exportar JSON” para gerar um arquivo com o merge e comite no repositório se quiser persistir no Git.</div>
+      </aside>
+    </div>
+
+    <footer>Feito para demonstração no GitHub Pages — leitura de <span class="kbd">data/produtos.json</span> + overlay em <span class="kbd">localStorage</span>.</footer>
+  </div>
+  <script src="admin.js"></script>
+</body>
+</html>
